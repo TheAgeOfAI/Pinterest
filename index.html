@@ -1,133 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Masonry Gallery</title>
-<style>
-:root {
-  --gap: 14px;
-  --bg: #0f1115;
-  --fg: #e7eaf0;
-  --card-bg: #141824;
-  --radius: 10px;
-}
-* { box-sizing: border-box; }
-body {
-  margin: 0;
-  font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-  background: var(--bg);
-  color: var(--fg);
-}
-.header {
-  position: sticky;
-  top: 0;
-  background: linear-gradient(180deg, rgba(15,17,21,.95), rgba(15,17,21,.7));
-  backdrop-filter: blur(6px);
-  padding: 12px 18px;
-  z-index: 2;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-}
-.container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 16px;
-}
-.grid {
-  column-count: 4;
-  column-gap: var(--gap);
-}
-@media (max-width: 1200px) { .grid { column-count: 3; } }
-@media (max-width: 900px)  { .grid { column-count: 2; } }
-@media (max-width: 600px)  { .grid { column-count: 1; } }
-.item {
-  break-inside: avoid;
-  margin: 0 0 var(--gap);
-  display: inline-block;
-  width: 100%;
-  background: var(--card-bg);
-  border-radius: var(--radius);
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.06);
-  opacity: 0;
-  transform: translateY(10px);
-  transition: opacity 0.6s ease, transform 0.6s ease;
-}
-.item.loaded {
-  opacity: 1;
-  transform: translateY(0);
-}
-.item img {
-  display: block;
-  width: 100%;
-  height: auto;
-  cursor: zoom-in;
-}
-.footer {
-  opacity: .6;
-  font-size: 12px;
-  text-align: center;
-  padding: 20px 0 30px;
-}
-.toolbar {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.toolbar input[type="search"] {
-  background: #0b0d12;
-  border: 1px solid rgba(255,255,255,0.08);
-  color: var(--fg);
-  border-radius: 8px;
-  padding: 8px 10px;
-  outline: none;
-}
-.hidden { display: none !important; }
-
-/* Lightbox */
-.lightbox {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.9);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.3s ease;
-  z-index: 999;
-}
-.lightbox.show {
-  opacity: 1;
-  visibility: visible;
-}
-.lightbox img {
-  max-width: 90%;
-  max-height: 90%;
-  border-radius: var(--radius);
-}
-.lightbox .close, .lightbox .prev, .lightbox .next {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 30px;
-  color: #fff;
-  background: rgba(0,0,0,0.5);
-  border: none;
-  padding: 10px;
-  cursor: pointer;
-  border-radius: 50%;
-}
-.lightbox .close {
-  top: 20px;
-  right: 20px;
-  transform: none;
-}
-.lightbox .prev { left: 20px; }
-.lightbox .next { right: 20px; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Masonry Gallery</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="header">
@@ -139,6 +16,7 @@ body {
       </div>
     </div>
   </div>
+
   <div class="container">
     <div id="grid" class="grid"></div>
     <div class="footer">
@@ -146,131 +24,14 @@ body {
     </div>
   </div>
 
-<!-- Lightbox -->
-<div class="lightbox" id="lightbox">
-  <button class="close">&times;</button>
-  <button class="prev">&#10094;</button>
-  <img id="lightbox-img" src="" alt="">
-  <button class="next">&#10095;</button>
-</div>
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox">
+    <button class="close">&times;</button>
+    <button class="prev">&#10094;</button>
+    <img id="lightbox-img" src="" alt="">
+    <button class="next">&#10095;</button>
+  </div>
 
-<script>
-const q = document.getElementById('q');
-const grid = document.getElementById('grid');
-const count = document.getElementById('count');
-const exts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
-
-async function loadImages() {
-  const res = await fetch('images/');
-  const text = await res.text();
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(text, 'text/html');
-  const links = Array.from(doc.querySelectorAll('a'));
-  
-  const images = links
-    .map(a => a.getAttribute('href'))
-    .filter(href => exts.some(ext => href.toLowerCase().endsWith(ext)));
-  
-  grid.innerHTML = images.map(img =>
-    `<figure class="item"><img loading="lazy" data-src="images/${img}" alt="${img}"></figure>`
-  ).join('');
-  
-  enableLazyLoading();
-  updateCount();
-  enableFilter();
-  enableLightbox(images);
-}
-
-function updateCount() {
-  const items = Array.from(grid.querySelectorAll('.item'));
-  const visible = items.filter(el => !el.classList.contains('hidden')).length;
-  count.textContent = visible + ' image' + (visible === 1 ? '' : 's');
-}
-
-function enableFilter() {
-  const items = Array.from(grid.querySelectorAll('.item'));
-  q.addEventListener('input', (e) => {
-    const term = e.target.value.trim().toLowerCase();
-    items.forEach(el => {
-      const img = el.querySelector('img');
-      const name = img.getAttribute('data-src').split('/').pop().toLowerCase();
-      if (!term || name.includes(term)) {
-        el.classList.remove('hidden');
-      } else {
-        el.classList.add('hidden');
-      }
-    });
-    updateCount();
-  });
-}
-
-function enableLazyLoading() {
-  const items = document.querySelectorAll('.item img');
-  const observer = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const img = entry.target;
-        img.src = img.dataset.src;
-        img.onload = () => img.parentElement.classList.add('loaded');
-        observer.unobserve(img);
-      }
-    });
-  }, { rootMargin: '100px' });
-  
-  items.forEach(img => observer.observe(img));
-}
-
-function enableLightbox(images) {
-  const lightbox = document.getElementById('lightbox');
-  const lightboxImg = document.getElementById('lightbox-img');
-  const btnClose = lightbox.querySelector('.close');
-  const btnPrev = lightbox.querySelector('.prev');
-  const btnNext = lightbox.querySelector('.next');
-  
-  let currentIndex = 0;
-
-  function showLightbox(index) {
-    currentIndex = index;
-    lightboxImg.src = 'images/' + images[currentIndex];
-    lightbox.classList.add('show');
-  }
-
-  function hideLightbox() {
-    lightbox.classList.remove('show');
-  }
-
-  grid.addEventListener('click', (e) => {
-    if (e.target.tagName === 'IMG') {
-      const src = e.target.dataset.src;
-      currentIndex = images.findIndex(img => 'images/' + img === src);
-      showLightbox(currentIndex);
-    }
-  });
-
-  btnClose.addEventListener('click', hideLightbox);
-  lightbox.addEventListener('click', (e) => {
-    if (e.target === lightbox) hideLightbox();
-  });
-
-  btnPrev.addEventListener('click', () => {
-    currentIndex = (currentIndex - 1 + images.length) % images.length;
-    showLightbox(currentIndex);
-  });
-
-  btnNext.addEventListener('click', () => {
-    currentIndex = (currentIndex + 1) % images.length;
-    showLightbox(currentIndex);
-  });
-
-  document.addEventListener('keydown', (e) => {
-    if (!lightbox.classList.contains('show')) return;
-    if (e.key === 'Escape') hideLightbox();
-    if (e.key === 'ArrowLeft') btnPrev.click();
-    if (e.key === 'ArrowRight') btnNext.click();
-  });
-}
-
-loadImages();
-</script>
+  <script src="script.js"></script>
 </body>
 </html>
